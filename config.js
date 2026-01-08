@@ -3,4 +3,4 @@
  * Production Backend URL (Railway)
  */
 
-window.API_BASE = 'http://localhost:5000/api'
+window.API_BASE = 'https://soundwave-production-825a.up.railway.app/api'
