@@ -46,7 +46,7 @@ CORS(app)
 DOWNLOAD_DIR = os.path.join(tempfile.gettempdir(), 'soundwave_downloads')
 os.makedirs(DOWNLOAD_DIR, exist_ok=True)
 
-download_lock = threading.Lock()
+# Note: No global lock needed - each download uses unique UUID directory
 
 @app.route('/api/health', methods=['GET'])
 def health_check():
@@ -622,140 +622,140 @@ def download_track():
 
 
 def download_spotify(url, passed_title=None, passed_artist=None, passed_duration=None, passed_youtube_url=None, quality='320'):
-    with download_lock:
-        file_id = str(uuid.uuid4())[:8]
-        current_download_dir = os.path.join(DOWNLOAD_DIR, file_id)
-        os.makedirs(current_download_dir, exist_ok=True)
-        
-        # --- RESEARCH PHASE ---
-        # Always fetch fresh metadata from the track's own Spotify page
-        # This ensures accuracy, especially for playlist tracks
-        print(f"[Research] Fetching fresh metadata for: {url}")
-        
-        researched_title = passed_title
-        researched_artist = passed_artist
-        researched_duration = passed_duration
-        
-        try:
-            oembed_url = f"https://open.spotify.com/oembed?url={url}"
-            oembed_resp = requests.get(oembed_url, timeout=5)
-            if oembed_resp.status_code == 200:
-                data = oembed_resp.json()
-                full_title = data.get('title', '')
-                author = data.get('author_name', '')
-                
-                if ' by ' in full_title:
-                    parts = full_title.rsplit(' by ', 1)
-                    researched_title = parts[0]
-                    if author and author != 'Spotify':
-                        researched_artist = author
-                    else:
-                        researched_artist = parts[1]
+    file_id = str(uuid.uuid4())[:8]
+    current_download_dir = os.path.join(DOWNLOAD_DIR, file_id)
+    os.makedirs(current_download_dir, exist_ok=True)
+    
+    # --- RESEARCH PHASE ---
+    # Always fetch fresh metadata from the track's own Spotify page
+    # This ensures accuracy, especially for playlist tracks
+    print(f"[Research] Fetching fresh metadata for: {url}")
+    
+    researched_title = passed_title
+    researched_artist = passed_artist
+    researched_duration = passed_duration
+    
+    try:
+        oembed_url = f"https://open.spotify.com/oembed?url={url}"
+        oembed_resp = requests.get(oembed_url, timeout=5)
+        if oembed_resp.status_code == 200:
+            data = oembed_resp.json()
+            full_title = data.get('title', '')
+            author = data.get('author_name', '')
+            
+            if ' by ' in full_title:
+                parts = full_title.rsplit(' by ', 1)
+                researched_title = parts[0]
+                if author and author != 'Spotify':
+                    researched_artist = author
                 else:
-                    researched_title = full_title
-                    researched_artist = author if author and author != 'Spotify' else passed_artist
-                
-                # Fetch duration
-                researched_duration = scrape_spotify_duration(url) or passed_duration
-                
-                print(f"[Research] Confirmed: '{researched_artist} - {researched_title}' ({researched_duration}s)")
-        except Exception as e:
-            print(f"[Research] oEmbed failed: {e}, using passed metadata")
-        
-        fallback_title = researched_title or passed_title or "Spotify Track"
-        
-        # Clean directory
-        for f in os.listdir(current_download_dir):
-            try:
-                os.remove(os.path.join(current_download_dir, f))
-            except:
-                pass
+                    researched_artist = parts[1]
+            else:
+                researched_title = full_title
+                researched_artist = author if author and author != 'Spotify' else passed_artist
+            
+            # Fetch duration
+            researched_duration = scrape_spotify_duration(url) or passed_duration
+            
+            print(f"[Research] Confirmed: '{researched_artist} - {researched_title}' ({researched_duration}s)")
+    except Exception as e:
+        print(f"[Research] oEmbed failed: {e}, using passed metadata")
+    
+    fallback_title = researched_title or passed_title or "Spotify Track"
+    
+    # Clean directory
+    for f in os.listdir(current_download_dir):
+        try:
+            os.remove(os.path.join(current_download_dir, f))
+        except:
+            pass
 
-        output_path = os.path.join(current_download_dir, f'{fallback_title}.%(ext)s')
+    output_path = os.path.join(current_download_dir, f'{fallback_title}.%(ext)s')
+    
+    ydl_opts = {
+        'format': 'bestaudio/best',
+        'outtmpl': output_path,
+        'noplaylist': True,
+        'quiet': True,
+        'ffmpeg_location': FFMPEG_PATH,
+        'postprocessors': [{
+            'key': 'FFmpegExtractAudio',
+            'preferredcodec': 'mp3',
+            'preferredquality': str(quality),  # User selected quality
+        }],
+    }
+    
+    try:
+        youtube_url_used = passed_youtube_url  # Use preview URL if provided
         
-        ydl_opts = {
-            'format': 'bestaudio/best',
-            'outtmpl': output_path,
-            'noplaylist': True,
-            'quiet': True,
-            'ffmpeg_location': FFMPEG_PATH,
-            'postprocessors': [{
-                'key': 'FFmpegExtractAudio',
-                'preferredcodec': 'mp3',
-                'preferredquality': str(quality),  # User selected quality
-            }],
-        }
-        
-        try:
-            youtube_url_used = passed_youtube_url  # Use preview URL if provided
-            
-            # If we have a YouTube URL from preview, use it directly!
-            if youtube_url_used:
-                print(f"[Download] Using preview YouTube URL: {youtube_url_used}")
-                with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                    ydl.download([youtube_url_used])
-                print("Download from preview URL success!")
-                return process_and_send_spotify_file(current_download_dir, file_id, youtube_url_used)
-            
-            # Otherwise, search YouTube
-            search_query = f"{researched_artist} {researched_title}" if researched_artist and researched_title else None
-            
-            if not search_query or search_query == "Spotify Track":
-                print(f"Download aborted: Bad metadata")
-                try:
-                    shutil.rmtree(current_download_dir)
-                except:
-                    pass
-                return jsonify({'error': 'Mahnı tapılmadı (Spotify məlumatları oxuna bilmədi)'}), 404
-            
-            print(f"[Download] Searching YouTube: {search_query}")
-            
+        # If we have a YouTube URL from preview, use it directly!
+        if youtube_url_used:
+            print(f"[Download] Using preview YouTube URL: {youtube_url_used}")
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                # Get info first to validate
-                info_found = ydl.extract_info(f"ytsearch1:{search_query}", download=False)
-                if 'entries' in info_found and len(info_found['entries']) > 0:
-                    best_match = info_found['entries'][0]
-                    found_title = best_match.get('title')
-                    found_dur = best_match.get('duration')
-                    youtube_url_used = best_match.get('webpage_url')
-                    
-                    print(f"Found: {found_title} ({found_dur}s)")
-                    print(f"YouTube URL: {youtube_url_used}")
-                    
-                    # Validate using RESEARCHED metadata for accuracy
-                    dur_ok = is_duration_valid(researched_duration, found_dur)
-                    title_ok = is_title_accurate(researched_title or fallback_title, researched_artist or "Spotify", found_title)
-                    
-                    if dur_ok and title_ok:
-                        print("Validation passed, downloading...")
-                        ydl.download([youtube_url_used])
-                    elif dur_ok:
-                        # Duration matches but title doesn't - likely still correct, proceed with warning
-                        print(f"[Warning] Title mismatch but duration OK - proceeding anyway")
-                        print(f"  Expected: {researched_title} by {researched_artist}")
-                        print(f"  Found: {found_title}")
-                        ydl.download([youtube_url_used])
-                    else:
-                        error_detail = []
-                        if not dur_ok: error_detail.append(f"Müddət (Gözlənilən: {researched_duration}s, Tapılan: {found_dur}s)")
-                        if not title_ok: error_detail.append(f"Ad")
-                        
-                        error_msg = f"Məlumat uyğunsuzluğu: {', '.join(error_detail)}"
-                        print(f"Validation failed: {error_msg}")
-                        return jsonify({'error': f'Mahnı tapılmadı ({error_msg})', 'youtube_url': youtube_url_used}), 404
-                else:
-                    return jsonify({'error': 'YouTube-da nəticə tapılmadı'}), 404
-                    
-            print("Download success!")
+                ydl.download([youtube_url_used])
+            print("Download from preview URL success!")
             return process_and_send_spotify_file(current_download_dir, file_id, youtube_url_used)
-            
-        except Exception as e:
-            print(f"Fallback failed: {e}")
+        
+        # Otherwise, search YouTube
+        search_query = f"{researched_artist} {researched_title}" if researched_artist and researched_title else None
+        
+        if not search_query or search_query == "Spotify Track":
+            print(f"Download aborted: Bad metadata")
             try:
                 shutil.rmtree(current_download_dir)
             except:
                 pass
-            return jsonify({'error': f'Yükləmə xətası: {str(e)}'}), 404
+            return jsonify({'error': 'Mahnı tapılmadı (Spotify məlumatları oxuna bilmədi)'}), 404
+        
+        print(f"[Download] Searching YouTube: {search_query}")
+        
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            # Get info first to validate
+            info_found = ydl.extract_info(f"ytsearch1:{search_query}", download=False)
+            if 'entries' in info_found and len(info_found['entries']) > 0:
+                best_match = info_found['entries'][0]
+                found_title = best_match.get('title')
+                found_dur = best_match.get('duration')
+                youtube_url_used = best_match.get('webpage_url')
+                
+                print(f"Found: {found_title} ({found_dur}s)")
+                print(f"YouTube URL: {youtube_url_used}")
+                
+                # Validate using RESEARCHED metadata for accuracy
+                dur_ok = is_duration_valid(researched_duration, found_dur)
+                title_ok = is_title_accurate(researched_title or fallback_title, researched_artist or "Spotify", found_title)
+                
+                if dur_ok and title_ok:
+                    print("Validation passed, downloading...")
+                    ydl.download([youtube_url_used])
+                elif dur_ok:
+                    # Duration matches but title doesn't - likely still correct, proceed with warning
+                    print(f"[Warning] Title mismatch but duration OK - proceeding anyway")
+                    print(f"  Expected: {researched_title} by {researched_artist}")
+                    print(f"  Found: {found_title}")
+                    ydl.download([youtube_url_used])
+                else:
+                    error_detail = []
+                    if not dur_ok: error_detail.append(f"Müddət (Gözlənilən: {researched_duration}s, Tapılan: {found_dur}s)")
+                    if not title_ok: error_detail.append(f"Ad")
+                    
+                    error_msg = f"Məlumat uyğunsuzluğu: {', '.join(error_detail)}"
+                    print(f"Validation failed: {error_msg}")
+                    return jsonify({'error': f'Mahnı tapılmadı ({error_msg})', 'youtube_url': youtube_url_used}), 404
+            else:
+                return jsonify({'error': 'YouTube-da nəticə tapılmadı'}), 404
+                
+        print("Download success!")
+        return process_and_send_spotify_file(current_download_dir, file_id, youtube_url_used)
+        
+    except Exception as e:
+        print(f"Fallback failed: {e}")
+        try:
+            shutil.rmtree(current_download_dir)
+        except:
+            pass
+        return jsonify({'error': f'Yükləmə xətası: {str(e)}'}), 404
+
 
 def process_and_send_spotify_file(download_dir, file_id, youtube_url=None):
     filepath = None
