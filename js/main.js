@@ -50,9 +50,53 @@
         checkServerStatus();
         setInterval(checkServerStatus, 30000);
 
+        // Fetch download stats for social proof
+        fetchStats();
+        setInterval(fetchStats, 30000);
+
+        // Track unique visitor (only once per page load)
+        trackVisit();
+
         // Focus input on load
         elements.urlInput?.focus();
     }
+
+    /**
+     * Track unique visitor via backend
+     */
+    async function trackVisit() {
+        try {
+            await fetch(`${window.API_BASE}/visit`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' }
+            });
+        } catch (e) {
+            // Silently fail - visitor tracking is not critical
+            console.log('[Visit] Could not track visit:', e.message);
+        }
+    }
+
+    /**
+     * Fetch download statistics for social proof
+     */
+    async function fetchStats() {
+        try {
+            const response = await fetch(`${window.API_BASE}/stats`);
+            if (response.ok) {
+                const data = await response.json();
+                const countEl = document.getElementById('downloads-count');
+                if (countEl) {
+                    countEl.textContent = data.downloads_today || 0;
+                }
+            }
+        } catch (e) {
+            // Silently fail - stats are not critical
+            console.log('[Stats] Could not fetch stats:', e.message);
+        }
+    }
+
+    // Make fetchStats globally accessible for spotify.js to call after downloads
+    window.refreshStats = fetchStats;
 
     /**
      * Set theme

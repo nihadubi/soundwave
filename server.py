@@ -15,6 +15,7 @@ import re
 import time
 import shutil
 import warnings
+from datetime import date
 from unidecode import unidecode
 import json
 import requests
@@ -48,10 +49,54 @@ os.makedirs(DOWNLOAD_DIR, exist_ok=True)
 
 # Note: No global lock needed - each download uses unique UUID directory
 
+# Social proof stats - tracks daily downloads and unique visitors (in-memory, resets on server restart)
+STATS = {
+    'downloads_today': 0,
+    'visitors_today': 0,
+    'visited_ips': set(),  # Track unique IPs per day
+    'last_reset': date.today().isoformat()
+}
+
 @app.route('/api/health', methods=['GET'])
 def health_check():
     """Health check endpoint for server status."""
     return jsonify({'status': 'ok', 'message': 'SoundWave server is running'}), 200
+
+@app.route('/api/stats', methods=['GET'])
+def get_stats():
+    """Get daily download and visitor statistics for social proof."""
+    today = date.today().isoformat()
+    
+    # Reset counters if it's a new day (midnight reset)
+    if STATS['last_reset'] != today:
+        STATS['downloads_today'] = 0
+        STATS['visitors_today'] = 0
+        STATS['visited_ips'].clear()  # Clear IP set for new day
+        STATS['last_reset'] = today
+    
+    return jsonify({
+        'downloads_today': STATS['downloads_today'],
+        'visitors_today': STATS['visitors_today'],
+        'date': today
+    })
+
+@app.route('/api/visit', methods=['POST'])
+def track_visit():
+    """Track unique visitor by IP address."""
+    # Get real IP address (handle Railway/Vercel proxy)
+    visitor_ip = request.headers.get('X-Forwarded-For', request.remote_addr)
+    
+    # If X-Forwarded-For contains multiple IPs (comma-separated), get the first one
+    if ',' in visitor_ip:
+        visitor_ip = visitor_ip.split(',')[0].strip()
+    
+    # Check if this IP has visited today
+    if visitor_ip not in STATS['visited_ips']:
+        STATS['visitors_today'] += 1
+        STATS['visited_ips'].add(visitor_ip)
+        return jsonify({'success': True, 'new_visitor': True}), 200
+    else:
+        return jsonify({'success': True, 'new_visitor': False}), 200
 
 def is_spotify_url(url):
     return 'spotify.com' in url or 'spotify:' in url
@@ -784,6 +829,13 @@ def process_and_send_spotify_file(download_dir, file_id, youtube_url=None):
     return send_audio_file(new_filepath, title, youtube_url)
 
 def send_audio_file(filepath, title, youtube_url=None):
+    # Increment download counter for social proof
+    today = date.today().isoformat()
+    if STATS['last_reset'] != today:
+        STATS['downloads_today'] = 0
+        STATS['last_reset'] = today
+    STATS['downloads_today'] += 1
+    
     ext = os.path.splitext(filepath)[1].lower() or '.mp3'
     content_type = 'audio/mpeg' if ext == '.mp3' else 'audio/mp4'
     

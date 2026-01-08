@@ -161,6 +161,11 @@ const Spotify = {
             await Utils.delay(2000);
             Utils.hideProgress();
 
+            // Refresh stats counter immediately
+            if (typeof window.refreshStats === 'function') {
+                window.refreshStats();
+            }
+
             return { success: true };
 
         } catch (error) {
@@ -314,6 +319,12 @@ const Spotify = {
             });
 
             Utils.updateTrackStatus(index, 'downloaded');
+
+            // Refresh stats counter immediately
+            if (typeof window.refreshStats === 'function') {
+                window.refreshStats();
+            }
+
             return true;
 
         } catch (error) {
@@ -370,6 +381,11 @@ const Spotify = {
             Utils.showStatus(Utils.t('statusSuccess'), 'success');
         } else {
             Utils.showStatus(`${completed} ${Utils.t('statusSuccess')}, ${failed} ${Utils.t('statusError')}`, 'warning');
+        }
+
+        // Refresh stats counter after batch download
+        if (typeof window.refreshStats === 'function') {
+            window.refreshStats();
         }
     }
 };
