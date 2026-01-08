@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="az" data-i18n-lang="az">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Spotify-dan mahnı, playlist və albom yükləyin. Pulsuz, sürətli və asandır.">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <title>SoundWave</title>
+    <link rel="icon" type="image/png" href="assets/logo.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/styles.css?v=2.0">
+</head>
+
+<body>
+    <!-- Background Effects -->
+    <div class="bg-effects">
+        <div class="gradient-orb orb-1"></div>
+        <div class="gradient-orb orb-2"></div>
+        <div class="gradient-orb orb-3"></div>
+        <div class="horizon-glow"></div>
+    </div>
+
+    <!-- Server Status Indicator -->
+    <div class="server-status" id="server-status">
+        <span class="status-dot"></span>
+        <span class="status-text" data-i18n="serverOnline">Server: Online</span>
+    </div>
+
+    <!-- Social Links -->
+    <div class="social-links">
+        <a href="https://discord.com/users/nihadubi" target="_blank" class="social-link discord" title="Discord">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
+                <path
+                    d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028 14.09 14.09 0 0 0 1.226-1.994.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z" />
+            </svg>
+            <span>nihadubi</span>
+        </a>
+        <a href="https://github.com/nihadubi" target="_blank" class="social-link github" title="GitHub">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
+                <path
+                    d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z" />
+            </svg>
+            <span>nihadubi</span>
+        </a>
+    </div>
+
+    <!-- Main Container -->
+    <div class="container">
+        <div class="header-right">
+            <div class="lang-switcher">
+                <button class="lang-btn active" data-lang="az">AZ</button>
+                <span class="lang-divider">|</span>
+                <button class="lang-btn" data-lang="en">EN</button>
+            </div>
+        </div>
+
+        <!-- Settings Button (Fixed Position) -->
+        <button class="settings-btn" id="settings-btn" title="Settings">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+                <path
+                    d="M19.14 12.94c.04-.31.06-.63.06-.94 0-.31-.02-.63-.06-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.04.31-.06.63-.06.94s.02.63.06.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z" />
+            </svg>
+        </button>
+
+        <!-- Settings Panel -->
+        <div class="settings-panel" id="settings-panel" style="display: none;">
+            <div class="settings-header">
+                <span>⚙️ Ayarlar</span>
+                <button class="settings-close" id="settings-close">×</button>
+            </div>
+            <div class="settings-group">
+                <label class="settings-label">🎨 Mövzu</label>
+                <div class="theme-options">
+                    <button class="theme-btn active" data-theme="mint" title="Mint">
+                        <span class="theme-color" style="background: #386641;"></span>
+                    </button>
+                    <button class="theme-btn" data-theme="purple" title="Purple">
+                        <span class="theme-color" style="background: #5a189a;"></span>
+                    </button>
+                </div>
+            </div>
+            <div class="settings-group">
+                <label class="settings-label">🎧 Keyfiyyət</label>
+                <div class="quality-options">
+                    <button class="quality-btn" data-quality="128">128k</button>
+                    <button class="quality-btn" data-quality="192">192k</button>
+                    <button class="quality-btn active" data-quality="320">320k</button>
+                </div>
+            </div>
+        </div>
+
+
+        <!-- Header -->
+        <header class="header">
+            <div class="logo">
+                <div class="logo-icon">
+                    <img src="assets/logo.png" alt="SoundWave Logo" class="logo-img">
+                </div>
+                <h1 class="logo-text">SoundWave</h1>
+            </div>
+            <p class="tagline" data-i18n="tagline">Feel the Rhythm, Catch the Wave</p>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Platform Badges -->
+
+
+            <!-- Download Card -->
+            <div class="download-card">
+                <div class="input-wrapper">
+                    <div class="input-icon">🔗</div>
+                    <input type="text" id="url-input" class="url-input" placeholder="Spotify linkini yapışdırın..."
+                        autocomplete="off" data-i18n-placeholder="inputPlaceholder">
+                    <button class="clear-btn" id="clear-btn" title="Təmizlə" data-i18n-title="clearTitle">✕</button>
+                </div>
+                <button class="download-btn" id="download-btn">
+                    <span class="btn-text" data-i18n="downloadBtn">YÜKLƏ</span>
+                </button>
+            </div>
+
+            <!-- Status Messages -->
+            <div class="status-container" id="status-container">
+                <!-- Status messages will be injected here -->
+            </div>
+
+            <!-- Track/Playlist Info -->
+            <div class="track-info" id="track-info" style="display: none;">
+                <div class="track-header">
+                    <img src="" alt="Cover" class="track-cover" id="track-cover">
+                    <div class="track-details">
+                        <h3 class="track-title" id="track-title">Track Title</h3>
+                        <p class="track-artist" id="track-artist">Artist Name</p>
+                        <span class="track-type" id="track-type">Track</span>
+
+                        <!-- Audio Player Controls -->
+                        <div class="audio-player-controls" id="audio-player-controls" style="display: none;">
+                            <button class="audio-play-btn" id="audio-play-btn" title="Play">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M8 5v14l11-7z" />
+                                </svg>
+                                <span class="audio-btn-text">Play</span>
+                            </button>
+
+                            <!-- Timeline -->
+                            <div class="audio-timeline">
+                                <span class="audio-time" id="audio-current-time">0:00</span>
+                                <input type="range" class="audio-progress" id="audio-progress" min="0" max="100"
+                                    value="0">
+                                <span class="audio-time" id="audio-duration">0:00</span>
+                            </div>
+
+                            <!-- Volume Control -->
+                            <div class="audio-volume-control">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                                    <path
+                                        d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z" />
+                                </svg>
+                                <input type="range" class="audio-volume" id="audio-volume" min="0" max="100" value="70">
+                            </div>
+
+                            <audio id="track-audio" preload="none"></audio>
+                        </div>
+                    </div>
+                </div>
+                <!-- YouTube Preview Section -->
+                <div class="preview-section" id="preview-section" style="display: none;">
+                    <div class="preview-header">
+                        <span class="preview-label">🎬 YouTube:</span>
+                        <a href="#" target="_blank" class="preview-link" id="preview-link">Loading...</a>
+                    </div>
+                    <div class="preview-status" id="preview-status"></div>
+                </div>
+            </div>
+
+            <!-- Playlist Container -->
+            <div class="playlist-container" id="playlist-container" style="display: none;">
+                <div class="playlist-header">
+                    <div class="playlist-info">
+                        <h3 class="playlist-title" id="playlist-title">Playlist Name</h3>
+                        <span class="playlist-count" id="playlist-count">0 tracks</span>
+                    </div>
+                    <div class="playlist-actions">
+                        <button class="select-all-btn" id="select-all-btn" data-i18n="selectAll">Hamısını Seç</button>
+                        <button class="download-all-btn" id="download-all-btn">
+                            <span data-i18n="downloadAll">Hamısını Yüklə</span>
+                        </button>
+                    </div>
+                </div>
+                <div class="playlist-tracks" id="playlist-tracks">
+                    <!-- Tracks will be injected here -->
+                </div>
+            </div>
+
+            <!-- Download Progress -->
+            <div class="progress-container" id="progress-container" style="display: none;">
+                <div class="progress-info">
+                    <span class="progress-title" id="progress-title" data-i18n="progressTitle">Yüklənir...</span>
+                    <span class="progress-percent" id="progress-percent">0%</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progress-fill"></div>
+                </div>
+                <!-- Music Visualizer -->
+                <div class="visualizer" id="visualizer">
+                    <div class="visualizer-bar"></div>
+                    <div class="visualizer-bar"></div>
+                    <div class="visualizer-bar"></div>
+                    <div class="visualizer-bar"></div>
+                    <div class="visualizer-bar"></div>
+                    <div class="visualizer-bar"></div>
+                    <div class="visualizer-bar"></div>
+                    <div class="visualizer-bar"></div>
+                </div>
+                <p class="progress-status" id="progress-status" data-i18n="progressStatus">Hazırlanır...</p>
+                <div class="log-container" id="log-container">
+                    <!-- Logs will be injected here -->
+                </div>
+            </div>
+
+            <!-- Download History -->
+            <div class="history-section" id="history-section" style="display: none;">
+                <h3 class="history-title">
+                    <span>📥</span> <span data-i18n="historyTitle">Son Yükləmələr</span>
+                </h3>
+                <div class="history-list" id="history-list">
+                    <!-- History items will be injected here -->
+                </div>
+                <button class="clear-history-btn" id="clear-history-btn" data-i18n="clearHistory">Tarixçəni
+                    Təmizlə</button>
+            </div>
+        </main>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <p data-i18n="footerText">© 2026 SoundWave. Yalnız şəxsi istifadə üçün.</p>
+        </footer>
+    </div>
+
+    <!-- Scripts -->
+    <script src="config.js?v=2.0"></script>
+    <script src="js/utils.js?v=2.0"></script>
+    <script src="js/spotify.js?v=2.0"></script>
+    <script src="js/main.js?v=2.0"></script>
+</body>
+
+</html>

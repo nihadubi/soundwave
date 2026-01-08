@@ -1,0 +1,8 @@
+[phases.setup]
+pkgs = ['python', 'ffmpeg']
+
+[phases.install]
+cmds = ['pip install -r requirements.txt']
+
+[start]
+cmd = 'gunicorn server:app'
