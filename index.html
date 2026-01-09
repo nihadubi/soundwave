@@ -13,7 +13,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/styles.css?v=2.0">
+    <link rel="stylesheet" href="css/styles.css?v=22.0">
 </head>
 
 <body>
@@ -25,18 +25,24 @@
         <div class="horizon-glow"></div>
     </div>
 
-    <!-- Server Status Indicator -->
-    <div class="server-status" id="server-status">
-        <span class="status-dot"></span>
-        <span class="status-text" data-i18n="serverOnline">Server: Online</span>
+    <!-- Status Indicators -->
+    <div class="status-container">
+        <div class="status-pill server-status" id="server-status">
+            <span class="status-dot"></span>
+            <span class="status-text" data-i18n="serverOnline">Server: Online</span>
+        </div>
+
+        <div class="status-pill stats-pill" id="stats-badge">
+            <span class="stat-item" title="Bugünkü ziyarətçilər">
+                👁️ <span id="visitors-count">0</span>
+            </span>
+            <span class="stat-divider">|</span>
+            <span class="stat-item" title="Bugünkü yükləmələr">
+                📥 <span id="downloads-count">0</span>
+            </span>
+        </div>
     </div>
 
-    <!-- Social Proof Stats Badge -->
-    <div class="stats-badge" id="stats-badge"
-        style="position: fixed; top: 70px; left: 20px; font-size: 12px; opacity: 0.7; color: var(--text-secondary, #888);">
-        🔥 <span data-i18n="statsToday">Today:</span> <span id="downloads-count">0</span> <span
-            data-i18n="statsDownloads">downloads</span>
-    </div>
 
     <!-- Social Links -->
     <div class="social-links">
@@ -77,22 +83,11 @@
         <!-- Settings Panel -->
         <div class="settings-panel" id="settings-panel" style="display: none;">
             <div class="settings-header">
-                <span>⚙️ Ayarlar</span>
+                <span data-i18n="settingsTitle">⚙️ Ayarlar</span>
                 <button class="settings-close" id="settings-close">×</button>
             </div>
             <div class="settings-group">
-                <label class="settings-label">🎨 Mövzu</label>
-                <div class="theme-options">
-                    <button class="theme-btn active" data-theme="mint" title="Mint">
-                        <span class="theme-color" style="background: #386641;"></span>
-                    </button>
-                    <button class="theme-btn" data-theme="purple" title="Purple">
-                        <span class="theme-color" style="background: #5a189a;"></span>
-                    </button>
-                </div>
-            </div>
-            <div class="settings-group">
-                <label class="settings-label">🎧 Keyfiyyət</label>
+                <label class="settings-label" data-i18n="settingsQuality">🎧 Keyfiyyət</label>
                 <div class="quality-options">
                     <button class="quality-btn" data-quality="128">128k</button>
                     <button class="quality-btn" data-quality="192">192k</button>
@@ -100,7 +95,6 @@
                 </div>
             </div>
         </div>
-
 
         <!-- Header -->
         <header class="header">
@@ -131,8 +125,9 @@
                 </button>
             </div>
 
+
             <!-- Status Messages -->
-            <div class="status-container" id="status-container">
+            <div id="status-container">
                 <!-- Status messages will be injected here -->
             </div>
 
@@ -240,6 +235,25 @@
                 </div>
                 <button class="clear-history-btn" id="clear-history-btn" data-i18n="clearHistory">Tarixçəni
                     Təmizlə</button>
+            </div>
+
+            <!-- Features Grid -->
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">⚡</div>
+                    <h3 class="feature-title" data-i18n="featFastTitle">Super Sürətli</h3>
+                    <p class="feature-text" data-i18n="featFastText">Ani çevirmə və yükləmə.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🎧</div>
+                    <h3 class="feature-title" data-i18n="featQualityTitle">Yüksək Keyfiyyət</h3>
+                    <p class="feature-text" data-i18n="featQualityText">320kbps səs keyfiyyəti.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🛡️</div>
+                    <h3 class="feature-title" data-i18n="featSecureTitle">Təhlükəsiz və Pulsuz</h3>
+                    <p class="feature-text" data-i18n="featSecureText">Reklamsız, izləmədən, açıq mənbə.</p>
+                </div>
             </div>
         </main>
 

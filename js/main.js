@@ -84,9 +84,15 @@
             const response = await fetch(`${window.API_BASE}/stats`);
             if (response.ok) {
                 const data = await response.json();
+
                 const countEl = document.getElementById('downloads-count');
                 if (countEl) {
                     countEl.textContent = data.downloads_today || 0;
+                }
+
+                const visitorsEl = document.getElementById('visitors-count');
+                if (visitorsEl) {
+                    visitorsEl.textContent = data.visitors_today || 0;
                 }
             }
         } catch (e) {

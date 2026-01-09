@@ -21,6 +21,10 @@ import json
 import requests
 from dotenv import load_dotenv
 from youtubesearchpython import VideosSearch
+from ytmusicapi import YTMusic
+
+# Initialize YouTube Music API
+ytmusic = YTMusic()
 
 # Load environment variables from .env file
 load_dotenv()
@@ -257,51 +261,102 @@ def scrape_spotify_duration(url):
     except:
         return None
 
-def fast_youtube_search(query, limit=1):
+def youtube_music_search(artist, title):
     """
-    Fast YouTube search using youtube-search-python library.
-    3-5x faster than yt-dlp ytsearch for search-only operations.
-    
-    Args:
-        query: Search query string
-        limit: Number of results (default 1)
-    
-    Returns:
-        dict with video info or None
+    Search YouTube Music using ytmusicapi.
+    Triple validation: Artist match + Anti-Remix + Title similarity.
+    Returns None if no valid match found (does NOT return wrong songs).
     """
     try:
-        print(f"[FastSearch] Searching: {query}")
-        search = VideosSearch(query, limit=limit)
-        results = search.result()
+        # SANITIZE QUERY: Replace hyphens with spaces (YouTube interprets - as exclusion)
+        sanitized_title = title.replace('-', ' ').strip()
+        sanitized_artist = (artist or '').replace('-', ' ').strip()
         
-        if results and 'result' in results and len(results['result']) > 0:
-            video = results['result'][0]
-            print(f"[FastSearch] Found: {video.get('title')}")
+        # Title first is more accurate for song searches
+        query = f"{sanitized_title} {sanitized_artist}" if sanitized_artist else sanitized_title
+        print(f"[YTMusic] Searching: {query}")
+        
+        # Fetch 5 results for filtering
+        results = ytmusic.search(query=query, filter="songs", limit=5)
+        
+        if not results or len(results) == 0:
+            print("[YTMusic] No results found")
+            return None
+        
+        # Normalize Spotify artist for comparison
+        spotify_artist = (artist or '').lower().strip()
+        
+        # Words that indicate non-original versions
+        filter_words = ['remix', 'cover', 'live', 'club mix', 'acoustic', 'instrumental']
+        
+        # Check if Spotify title contains any of these words
+        title_lower = title.lower()
+        spotify_has_filter = any(word in title_lower for word in filter_words)
+        
+        # Iterate through results - TRIPLE VALIDATION
+        for song in results:
+            video_id = song.get('videoId')
+            if not video_id:
+                continue
             
-            # Convert duration from "MM:SS" or "HH:MM:SS" to seconds
-            duration_str = video.get('duration', '')
+            # Get YouTube artist and title
+            yt_artists = song.get('artists', [])
+            yt_artist = yt_artists[0].get('name', '').lower().strip() if yt_artists else ''
+            yt_title = song.get('title', '')
+            yt_title_lower = yt_title.lower()
+            
+            # CHECK A: Artist validation
+            if spotify_artist and yt_artist:
+                artist_match = (spotify_artist in yt_artist) or (yt_artist in spotify_artist)
+                if not artist_match:
+                    print(f"[YTMusic] REJECT (artist mismatch): '{yt_title}' by '{yt_artist}' != '{spotify_artist}'")
+                    continue
+            
+            # CHECK B: Anti-Remix filter
+            if not spotify_has_filter:
+                yt_has_filter = any(word in yt_title_lower for word in filter_words)
+                if yt_has_filter:
+                    print(f"[YTMusic] REJECT (unwanted version): '{yt_title}'")
+                    continue
+            
+            # CHECK C: Title similarity (uses existing helper function)
+            if not is_title_accurate(title, artist, yt_title):
+                print(f"[YTMusic] REJECT (title mismatch): '{yt_title}' != '{title}'")
+                continue
+            
+            # PASSED ALL 3 CHECKS - use this result
+            print(f"[YTMusic] ACCEPTED: '{yt_title}' by '{yt_artist}'")
+            
+            # Get duration in seconds
+            duration_text = song.get('duration', '')
             duration_seconds = None
-            if duration_str:
-                parts = duration_str.split(':')
-                if len(parts) == 2:  # MM:SS
+            if duration_text:
+                parts = duration_text.split(':')
+                if len(parts) == 2:
                     duration_seconds = int(parts[0]) * 60 + int(parts[1])
-                elif len(parts) == 3:  # HH:MM:SS
+                elif len(parts) == 3:
                     duration_seconds = int(parts[0]) * 3600 + int(parts[1]) * 60 + int(parts[2])
             
+            # Get thumbnail
+            thumbnail = None
+            if song.get('thumbnails') and len(song['thumbnails']) > 0:
+                thumbnail = song['thumbnails'][-1].get('url')
+            
             return {
-                'webpage_url': video.get('link'),
-                'title': video.get('title'),
+                'webpage_url': f"https://music.youtube.com/watch?v={video_id}",
+                'title': yt_title,
+                'artist': yt_artists[0].get('name', artist) if yt_artists else artist,
                 'duration': duration_seconds,
-                'upload_date': None,  # Not provided by this library
-                'timestamp': None
+                'thumbnail': thumbnail,
+                'channel': yt_artists[0].get('name', '') if yt_artists else ''
             }
         
-        print("[FastSearch] No results found")
+        # NO PANIC FALLBACK - if all results failed validation, return None
+        print("[YTMusic] All 5 results failed validation - no match found")
         return None
         
     except Exception as e:
-        print(f"[FastSearch] Error: {e}")
-        # Fallback to yt-dlp if youtube-search-python fails
+        print(f"[YTMusic] Error: {e}")
         return None
 
 def get_file_duration(filepath):
@@ -533,57 +588,37 @@ def get_spotify_info(url, log_error=False):
 
 @app.route('/api/preview', methods=['POST'])
 def preview_track():
-    """Quick YouTube search to show link before download - uses single fast query."""
+    """YouTube Music search - returns official audio tracks."""
     data = request.get_json()
     title = data.get('title', '')
     artist = data.get('artist', '')
-    duration = data.get('duration')
     
     if not title:
         return jsonify({'error': 'Title required'}), 400
     
-    # Single fast search query
-    search_query = f'{artist} {title}' if artist else title
-    print(f"[Preview] Fast search: {search_query}")
+    print(f"[Preview] Searching YouTube Music: {artist} - {title}")
     
     try:
-        # Try fast search first
-        video = fast_youtube_search(search_query, limit=1)
+        # Search YouTube Music (official audio tracks only)
+        video = youtube_music_search(artist, title)
         
-        # Fallback to yt-dlp if fast search fails
         if not video:
-            print("[Preview] Fast search failed, falling back to yt-dlp...")
-            ydl_opts = {
-                'quiet': True,
-                'no_warnings': True,
-                'format': 'bestaudio/best',
-            }
-            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                info = ydl.extract_info(f"ytsearch1:{search_query}", download=False)
-                if 'entries' in info and len(info['entries']) > 0:
-                    video = info['entries'][0]
-                else:
-                    return jsonify({'error': 'No results'}), 404
+            return jsonify({'error': 'No results found on YouTube Music'}), 404
         
         youtube_url = video.get('webpage_url')
         youtube_title = video.get('title')
         youtube_duration = video.get('duration')
+        channel = video.get('channel') or video.get('artist', '')
         
-        # Check duration match
-        duration_match = True
-        if duration and youtube_duration:
-            duration_match = abs(duration - youtube_duration) <= 15
-        
-        print(f"[Preview] Found: {youtube_title}")
+        print(f"[Preview] Found: {youtube_title} ({channel})")
         
         return jsonify({
             'success': True,
             'youtube_url': youtube_url,
             'youtube_title': youtube_title,
             'youtube_duration': youtube_duration,
-            'youtube_upload_date': video.get('upload_date'),
-            'youtube_timestamp': video.get('timestamp'),
-            'duration_match': duration_match
+            'youtube_channel': channel,
+            'duration_match': True
         })
                 
     except Exception as e:
@@ -741,54 +776,33 @@ def download_spotify(url, passed_title=None, passed_artist=None, passed_duration
             print("Download from preview URL success!")
             return process_and_send_spotify_file(current_download_dir, file_id, youtube_url_used)
         
-        # Otherwise, search YouTube
-        search_query = f"{researched_artist} {researched_title}" if researched_artist and researched_title else None
-        
-        if not search_query or search_query == "Spotify Track":
+        # Check if we have valid metadata
+        if not researched_title or not researched_artist or "Spotify" in researched_artist:
             print(f"Download aborted: Bad metadata")
             try:
                 shutil.rmtree(current_download_dir)
             except:
                 pass
-            return jsonify({'error': 'Mahnı tapılmadı (Spotify məlumatları oxuna bilmədi)'}), 404
+            return jsonify({'error': 'Track not found (Spotify metadata could not be read)'}), 404
         
-        print(f"[Download] Searching YouTube: {search_query}")
+        print(f"[Download] Searching YouTube Music: {researched_artist} - {researched_title}")
+        
+        # Search YouTube Music (official audio tracks only)
+        video = youtube_music_search(researched_artist, researched_title)
+        
+        if not video:
+            try:
+                shutil.rmtree(current_download_dir)
+            except:
+                pass
+            return jsonify({'error': 'No results found on YouTube Music'}), 404
+        
+        youtube_url_used = video.get('webpage_url')
+        print(f"[Download] Found: {video.get('title')}")
+        print(f"YouTube Music URL: {youtube_url_used}")
         
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            # Get info first to validate
-            info_found = ydl.extract_info(f"ytsearch1:{search_query}", download=False)
-            if 'entries' in info_found and len(info_found['entries']) > 0:
-                best_match = info_found['entries'][0]
-                found_title = best_match.get('title')
-                found_dur = best_match.get('duration')
-                youtube_url_used = best_match.get('webpage_url')
-                
-                print(f"Found: {found_title} ({found_dur}s)")
-                print(f"YouTube URL: {youtube_url_used}")
-                
-                # Validate using RESEARCHED metadata for accuracy
-                dur_ok = is_duration_valid(researched_duration, found_dur)
-                title_ok = is_title_accurate(researched_title or fallback_title, researched_artist or "Spotify", found_title)
-                
-                if dur_ok and title_ok:
-                    print("Validation passed, downloading...")
-                    ydl.download([youtube_url_used])
-                elif dur_ok:
-                    # Duration matches but title doesn't - likely still correct, proceed with warning
-                    print(f"[Warning] Title mismatch but duration OK - proceeding anyway")
-                    print(f"  Expected: {researched_title} by {researched_artist}")
-                    print(f"  Found: {found_title}")
-                    ydl.download([youtube_url_used])
-                else:
-                    error_detail = []
-                    if not dur_ok: error_detail.append(f"Müddət (Gözlənilən: {researched_duration}s, Tapılan: {found_dur}s)")
-                    if not title_ok: error_detail.append(f"Ad")
-                    
-                    error_msg = f"Məlumat uyğunsuzluğu: {', '.join(error_detail)}"
-                    print(f"Validation failed: {error_msg}")
-                    return jsonify({'error': f'Mahnı tapılmadı ({error_msg})', 'youtube_url': youtube_url_used}), 404
-            else:
-                return jsonify({'error': 'YouTube-da nəticə tapılmadı'}), 404
+            ydl.download([youtube_url_used])
                 
         print("Download success!")
         return process_and_send_spotify_file(current_download_dir, file_id, youtube_url_used)
@@ -799,7 +813,7 @@ def download_spotify(url, passed_title=None, passed_artist=None, passed_duration
             shutil.rmtree(current_download_dir)
         except:
             pass
-        return jsonify({'error': f'Yükləmə xətası: {str(e)}'}), 404
+        return jsonify({'error': f'Download error: {str(e)}'}), 404
 
 
 def process_and_send_spotify_file(download_dir, file_id, youtube_url=None):

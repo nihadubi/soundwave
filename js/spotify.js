@@ -31,7 +31,7 @@ const Spotify = {
             const response = await fetch(`${this.apiBase}/info?url=${encodeURIComponent(url)}`);
             if (!response.ok) {
                 const error = await response.json();
-                throw new Error(error.error || 'Məlumat alına bilmədi');
+                throw new Error(error.error || 'Data could not be fetched');
             }
             return await response.json();
         } catch (error) {

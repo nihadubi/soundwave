@@ -53,7 +53,17 @@ const Utils = {
             logSearchingYouTube: "YouTube-da mahnı axtarılır...",
             serverOnline: "Server: Aktiv",
             serverOffline: "Server: Offline",
-            clipboardDetected: "📋 Spotify linki clipboard-dan aşkar edildi"
+            clipboardDetected: "📋 Spotify linki clipboard-dan aşkar edildi",
+            // Features
+            featFastTitle: "Super Sürətli",
+            featFastText: "Ani çevirmə və yükləmə.",
+            featQualityTitle: "Yüksək Keyfiyyət",
+            featQualityText: "320kbps səs keyfiyyəti.",
+            featSecureTitle: "Təhlükəsiz və Pulsuz",
+            featSecureText: "Reklamsız, izləmədən, açıq mənbə.",
+            // Settings
+            settingsTitle: "⚙️ Ayarlar",
+            settingsQuality: "🎧 Keyfiyyət"
         },
         en: {
             tagline: "Feel the Rhythm, Catch the Wave",
@@ -105,7 +115,17 @@ const Utils = {
             logSearchingYouTube: "Searching for song on YouTube...",
             serverOnline: "Server: Online",
             serverOffline: "Server: Offline",
-            clipboardDetected: "📋 Spotify link detected from clipboard"
+            clipboardDetected: "📋 Spotify link detected from clipboard",
+            // Features
+            featFastTitle: "Super Fast",
+            featFastText: "Instant conversion & download.",
+            featQualityTitle: "High Quality",
+            featQualityText: "Up to 320kbps audio support.",
+            featSecureTitle: "Secure & Free",
+            featSecureText: "No ads, no tracking, open source.",
+            // Settings
+            settingsTitle: "⚙️ Settings",
+            settingsQuality: "🎧 Quality"
         }
     },
 
@@ -305,6 +325,20 @@ const Utils = {
 
         if (status && statusEl) {
             statusEl.textContent = this.t(status) || status;
+        }
+
+        // Fix: Instantly reset to 0% when new task starts (small targetPercent indicates new download)
+        if (targetPercent <= 15) {
+            // Temporarily disable CSS transitions
+            fill.style.transition = 'none';
+            fill.style.width = '0%';
+            if (percentEl) percentEl.textContent = '0%';
+
+            // Force browser reflow to apply the change instantly
+            fill.offsetWidth;
+
+            // Re-enable CSS transition
+            fill.style.transition = 'width 0.5s ease-out';
         }
 
         const currentPercent = parseFloat(fill.style.width) || 0;
